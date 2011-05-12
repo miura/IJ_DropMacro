@@ -24,8 +24,9 @@ public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runna
 	Choice exts = new Choice();
 	Choice paths = new Choice();
 	Button b = new Button();
+	Button clear = new Button();	
 	//TODO consider changing this to the original location, or just omit saving such
-	String dropletActionsPath = IJ.getDirectory("macros")+File.separator; //+"Droplet Actions"+File.separator;
+	String defaultMacroPath = IJ.getDirectory("macros")+File.separator; //+"Droplet Actions"+File.separator;
 	private boolean isNotDroppedYet = true; 
 
 	public void phantomMacroGenerator(){
@@ -38,41 +39,35 @@ public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runna
 		super("DropMacro");
 		if (IJ.versionLessThan("1.43i")) return;
 		l.setText("Drag a macro to run");
-		File f = new File(dropletActionsPath);
+		File f = new File(defaultMacroPath);
 		if (!f.exists()){ 
 			f.mkdir();
 			phantomMacroGenerator();
 		}
+		IJ.debugMode = true;		
 		String[] list = f.list();	// a list of pre-existing macros
 		if (list.length==0) 
 			phantomMacroGenerator();
 		for (int i=0; i<list.length; i++) {
-			if (list[i].endsWith(".txt")) {
+			if (list[i].endsWith(".txt") || list[i].endsWith(".ijm")){
+				paths.addItem(defaultMacroPath + list[i]);	
+				exts.addItem(list[i].substring(list[i].length()-4));
 				list[i] = list[i].substring(0, list[i].length()-4);
 				c.addItem(list[i]);
-				exts.addItem(".txt");
-				paths.addItem(dropletActionsPath + list[i]+ ".txt");	
-			} else if (list[i].endsWith(".ijm")) {
-				list[i] = list[i].substring(0, list[i].length()-4);
-				c.addItem(list[i]);
-				exts.addItem(".ijm");
-				paths.addItem(dropletActionsPath + list[i]+ ".txt");					
-			} else {
-				c.addItem(list[i]);
-				exts.addItem("");
-				paths.addItem(dropletActionsPath + list[i]);				
+				if (IJ.debugMode) IJ.log(list[i]);
 			}
 		}
 		b.setLabel("Run");
 		b.addActionListener(this);
+		clear.setLabel("Clear");
+		clear.addActionListener(this);		
 		setLayout (new FlowLayout ());
-		add(l);	add(c); add(b);
+		add(l);	add(c); add(b); add(clear);
 		pack();
 		GUI.center(this);
 		new DropTarget(this, this);
 		WindowManager.addWindow(this);
 		setVisible(true); // depreciated show() sends a warning
-		IJ.debugMode = true;
 	}
 	
 	// Droptarget Listener methods
@@ -94,7 +89,7 @@ public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runna
 					break;
 				} else if (flavors[i].isFlavorTextType()) {
 					Object ob = t.getTransferData(flavors[i]);
-					if (!(ob instanceof String)) continue;		// if the file is non-string type data, then omit the line below while looping;
+					if (!(ob instanceof String)) continue;	
 
 					String s = ob.toString().trim();
 					if (IJ.isLinux() && s.length()>1 && (int)s.charAt(1)==0)
@@ -185,12 +180,10 @@ public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runna
 			Object obj = iterator.next();
 			try {
 				File f = (File)obj;
-				//String path = f.getCanonicalPath();								
+				//String path = f.getCanonicalPath();
+				IJ.log(f.getCanonicalPath());
 				addtoChoiceList(f);
 				cIndex = c.getSelectedIndex();
-				//IJ.runMacroFile(paths.getItem(cIndex)+c.getSelectedItem()+exts.getItem(cIndex),path);
-				IJ.log(paths.getItem(cIndex));
-				//IJ.runMacroFile(paths.getItem(cIndex));
 			} catch (Throwable e) {
 				if (!Macro.MACRO_CANCELED.equals(e.getMessage()))
 					IJ.handleException(e);
@@ -206,6 +199,8 @@ public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runna
 			filepath = f.getCanonicalPath();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
+			if (!Macro.MACRO_CANCELED.equals(e.getMessage()))
+				IJ.handleException(e);			
 			e.printStackTrace();
 			//filepath = null;
 			return;
@@ -244,6 +239,11 @@ public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runna
 		if (source==b) {
 			cIndex = c.getSelectedIndex();
 			IJ.runMacroFile(paths.getItem(cIndex));
+		}
+		if (source == clear){
+			c.removeAll();
+			exts.removeAll();
+			paths.removeAll();			
 		}
 
 	}
