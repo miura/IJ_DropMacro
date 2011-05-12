@@ -11,7 +11,11 @@ import java.awt.datatransfer.*;
 import java.awt.dnd.*;
 import java.awt.event.*;
 
-/** This plug-in creates a frame that accepts drag and drop
+/** Drag  & Drop plugin for Javascript files.  
+ * Kota Miura (miura@embl.de)
+ * 
+ * --- modified Dropfile_.java: original description is below ---
+ * This plug-in creates a frame that accepts drag and drop
 * and calls the selected macro for each file.
 * based on the default sample plugin frame and the builtin DragAndDrop.java plugin
 * Jerome Mutterer and Wayne Rasband.
@@ -69,7 +73,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	}
 
 	public void phantomJSGenerator(){
-		IJ.log("creating a js file");
+		IJ.log("creating a phantom js file");
 		String exampleJS="IJ.log('hello world');" ;
 		try {
 		    BufferedWriter out = new BufferedWriter(new FileWriter(defaultScriptsPath+"helloworld.js"));
@@ -88,7 +92,6 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		return count;
 	}
 	// Droptarget Listener methods
-	// behavior dependent on the file type, image file or a text file. 
 	public void drop(DropTargetDropEvent dtde)  {
 		dtde.acceptDrop(DnDConstants.ACTION_COPY);
 		DataFlavor[] flavors = null;
@@ -233,23 +236,24 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	}
 	
 	// ActionListener method: edit button pushed
-	// TODO convert this to run
 	// add maybe another button to edit?
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
 		int cIndex;
-		if (source==b) {
-			cIndex = c.getSelectedIndex();
-			IJ.runMacroFile(paths.getItem(cIndex));
-		}
-		if (source == clear){
-			c.removeAll();
-			//exts.removeAll();
-			paths.removeAll();			
-		}
-		if (source == code){
-			cIndex = c.getSelectedIndex();
-			IJ.run("Edit...", "open=" + paths.getItem(cIndex));
+		if (c.getItemCount()>0) {
+			if (source==b) {
+				cIndex = c.getSelectedIndex();
+				IJ.runMacroFile(paths.getItem(cIndex));
+			}
+			if (source == clear){
+				c.removeAll();
+				//exts.removeAll();
+				paths.removeAll();			
+			}
+			if (source == code){
+				cIndex = c.getSelectedIndex();
+				IJ.run("Edit...", "open=" + paths.getItem(cIndex));
+			}
 		}
 
 	}
