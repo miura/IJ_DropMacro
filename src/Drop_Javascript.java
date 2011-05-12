@@ -17,48 +17,38 @@ import java.awt.event.*;
 * Jerome Mutterer and Wayne Rasband.
 */
 
+@SuppressWarnings("serial")
 public class Drop_Javascript extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
 	
 	private Iterator iterator;
 	Label l = new Label();
 	Choice c = new Choice();
-	Choice exts = new Choice();
+	//Choice exts = new Choice();
 	Choice paths = new Choice();
 	Button b = new Button();
-	Button clear = new Button();	
+	Button clear = new Button();
+	Button code = new Button();
 	//TODO consider changing this to the original location, or just omit saving such
 	String defaultScriptsPath = IJ.getDirectory("imagej")+File.separator+"scripts"+File.separator;
 	private boolean isNotDroppedYet = true; 
 
-	public void phantomJSGenerator(){
-		//String exampleMacro=" file=getArgument();\\n IJ.open(file);\\n IJ.run (\"8-bit\");";
-		//IJ.runMacro("f=File(defaultScriptsPath+"+"'Open as 8-bit.js'"+"); print(f,'"+exampleMacro+"');File.close(f);");
-		
-		String exampleJS="file=argments[0];IJ.open(file);IJ.run (\"8-bit\");" ;
-		String macrocontent = "importPackage(Packages.java.io);f= new FileWriter('D:\\Fiji.app\\scripts\\Open as 8-bit.js'); out = new BufferedWriter(f);out.write("+exampleJS+"); out.close();";
-		Macro_Runner jsrun = new ij.plugin.Macro_Runner();
-		jsrun.runJavaScript(macrocontent, "");
-	}
-	
-	
 	public Drop_Javascript() {
 		super("DropJavascript");
 		if (IJ.versionLessThan("1.43i")) return;
-		l.setText("Drag a javascript to run");
+		l.setText("Drop Javascripts here");
 		File f = new File(defaultScriptsPath);
 		if (!f.exists()){ 
 			f.mkdir();
-			phantomJSGenerator();
 		}
 		IJ.debugMode = true;		
 		String[] list = f.list();	// a list of pre-existing macros
-		if (list.length==0) 
+		if (countJSfiles(list)==0) {
 			phantomJSGenerator();
+			list = f.list();
+		}
 		for (int i=0; i<list.length; i++) {
 			if (list[i].endsWith(".js")){
 				paths.addItem(defaultScriptsPath + list[i]);	
-				exts.addItem(list[i].substring(list[i].length()-4));
-				list[i] = list[i].substring(0, list[i].length()-4);
 				c.addItem(list[i]);
 				if (IJ.debugMode) IJ.log(list[i]);
 			}
@@ -66,16 +56,37 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		b.setLabel("Run");
 		b.addActionListener(this);
 		clear.setLabel("Clear");
-		clear.addActionListener(this);		
+		clear.addActionListener(this);	
+		code.setLabel("Code");
+		code.addActionListener(this);			
 		setLayout (new FlowLayout ());
-		add(l);	add(c); add(b); add(clear);
+		add(l);	add(c); add(b); add(clear);add(code);
 		pack();
 		GUI.center(this);
 		new DropTarget(this, this);
 		WindowManager.addWindow(this);
 		setVisible(true); // depreciated show() sends a warning
 	}
+
+	public void phantomJSGenerator(){
+		IJ.log("creating a js file");
+		String exampleJS="IJ.log('hello world');" ;
+		try {
+		    BufferedWriter out = new BufferedWriter(new FileWriter(defaultScriptsPath+"helloworld.js"));
+		    out.write(exampleJS);
+		    out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
+	public int countJSfiles(String[] list){
+		int count = 0;
+		for (int i = 0; i< list.length; i++){
+			if (list[i].endsWith(".js")) count++;
+		}
+		return count;
+	}
 	// Droptarget Listener methods
 	// behavior dependent on the file type, image file or a text file. 
 	public void drop(DropTargetDropEvent dtde)  {
@@ -173,7 +184,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	}
 	
 	public void dragExit(DropTargetEvent e) {
-		l.setText("Drag files to process");
+		l.setText("Drop Javascripts here");
 	}
 	
 	public void dropActionChanged(DropTargetDragEvent e) {}
@@ -204,35 +215,21 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		try {
 			filepath = f.getCanonicalPath();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+
 			if (!Macro.MACRO_CANCELED.equals(e.getMessage()))
 				IJ.handleException(e);			
 			e.printStackTrace();
-			//filepath = null;
 			return;
 		}
 		if (isNotDroppedYet){
 			c.removeAll();
-			exts.removeAll();
+			//exts.removeAll();
 			paths.removeAll();
 			isNotDroppedYet = false;
 		}
-
-		if (filename.endsWith(".txt")) {		
-			filename = filename.substring(0, filename.length()-4);
-			c.addItem(filename);
-			exts.addItem(".txt");
-			paths.addItem(filepath);
-		} else if (filename.endsWith(".ijm")) {
-			filename = filename.substring(0, filename.length()-4);
-			c.addItem(filename);
-			exts.addItem(".ijm");
-			paths.addItem(filepath);
-		} else {
-			c.addItem(filename);
-			exts.addItem("");
-			paths.addItem(filepath);
-		}
+		c.addItem(filename);
+		//exts.addItem("");
+		paths.addItem(filepath);
 	}
 	
 	// ActionListener method: edit button pushed
@@ -240,7 +237,6 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	// add maybe another button to edit?
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
-		//if (source==b) IJ.run("Edit...", "open=["+dropletActionsPath+c.getSelectedItem()+exts.getItem(c.getSelectedIndex())+"]");
 		int cIndex;
 		if (source==b) {
 			cIndex = c.getSelectedIndex();
@@ -248,8 +244,12 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		}
 		if (source == clear){
 			c.removeAll();
-			exts.removeAll();
+			//exts.removeAll();
 			paths.removeAll();			
+		}
+		if (source == code){
+			cIndex = c.getSelectedIndex();
+			IJ.run("Edit...", "open=" + paths.getItem(cIndex));
 		}
 
 	}
