@@ -15,7 +15,8 @@ import java.awt.event.*;
  * Kota Miura (miura@embl.de)
  * 
  * --- modified Dropfile_.java: original description is below ---
- * This plug-in creates a frame that accepts drag and drop
+ * 
+* This plug-in creates a frame that accepts drag and drop
 * and calls the selected macro for each file.
 * based on the default sample plugin frame and the builtin DragAndDrop.java plugin
 * Jerome Mutterer and Wayne Rasband.
@@ -27,13 +28,14 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	private Iterator iterator;
 	Label l = new Label();
 	Choice c = new Choice();
-	//Choice exts = new Choice();
 	Choice paths = new Choice();
 	Button b = new Button();
 	Button clear = new Button();
 	Button code = new Button();
+
 	//TODO consider changing this to the original location, or just omit saving such
 	String defaultScriptsPath = IJ.getDirectory("imagej")+File.separator+"scripts"+File.separator;
+	
 	private boolean isNotDroppedYet = true; 
 
 	public Drop_Javascript() {
@@ -44,7 +46,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		if (!f.exists()){ 
 			f.mkdir();
 		}
-		IJ.debugMode = true;		
+		//IJ.debugMode = true;		
 		String[] list = f.list();	// a list of pre-existing macros
 		if (countJSfiles(list)==0) {
 			phantomJSGenerator();
