@@ -11,7 +11,7 @@ import java.awt.datatransfer.*;
 import java.awt.dnd.*;
 import java.awt.event.*;
 
-/** Drag  & Drop plugin for Javascript files.  
+/** Drag  & Drop plugin for Script files.  
  * Kota Miura (miura@embl.de)
  * 
  * --- modified Dropfile_.java: original description is below ---
@@ -23,7 +23,7 @@ import java.awt.event.*;
 */
 
 @SuppressWarnings("serial")
-public class Drop_Javascript extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
+public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
 	
 	private Iterator iterator;
 	Label l = new Label();
@@ -38,10 +38,10 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	
 	private boolean isNotDroppedYet = true; 
 
-	public Drop_Javascript() {
-		super("DropJavascript");
+	public Drop_Scripts() {
+		super("DropScript");
 		if (IJ.versionLessThan("1.43i")) return;
-		l.setText("Drop Javascripts here");
+		l.setText("Drop Scripts here");
 /*
 		File f = new File(defaultScriptsPath);
 		if (!f.exists()){ 
@@ -112,7 +112,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 					iterator = ((java.util.List)data).iterator();
 					if (IJ.debugMode) IJ.log("isFlavorJavaFileListType()");
 					break;
-				} else if (flavors[i].isFlavorTextType()) {
+				} /*else if (flavors[i].isFlavorTextType()) {
 					Object ob = t.getTransferData(flavors[i]);
 					if (!(ob instanceof String)) continue;	
 
@@ -141,10 +141,10 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 					}
 					this.iterator = list.iterator();
 					break;
-				}
+				}*/
 			}
 			if (iterator!=null) {
-				Thread thread = new Thread(this, "Drop_Javascript");
+				Thread thread = new Thread(this, "Drop_Script");
 				thread.setPriority(Math.max(thread.getPriority()-1, Thread.MIN_PRIORITY));
 				thread.start();
 			}
@@ -157,7 +157,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		if (flavors==null || flavors.length==0)
 			IJ.error("First drag and drop ignored\nPlease try again.");
 	}
-	private String fixLinuxString(String s) {
+/*	private String fixLinuxString(String s) {
 		StringBuffer sb = new StringBuffer(200);
 		for (int i=0; i<s.length(); i+=2)
 			sb.append(s.charAt(i));
@@ -180,7 +180,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		}
 		return s;
 	}
-
+*/
 	
 	public void dragEnter(DropTargetDragEvent e)  {
 		l.setText("Drop here!");
@@ -192,7 +192,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	}
 	
 	public void dragExit(DropTargetEvent e) {
-		l.setText("Drop Javascripts here");
+		l.setText("Drop Scripts here");
 	}
 	
 	public void dropActionChanged(DropTargetDragEvent e) {}
@@ -200,15 +200,16 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	// Runnable method: called after drag and drop
 	public void run() {
 		Iterator iterator = this.iterator;
-		int cIndex;
+		//int cIndex;
 		while(iterator.hasNext()) {
 			Object obj = iterator.next();
 			try {
 				File f = (File)obj;
-				//String path = f.getCanonicalPath();
-				IJ.log(f.getCanonicalPath());
-				addtoChoiceList(f);
-				cIndex = c.getSelectedIndex();
+				String path = f.getCanonicalPath();
+				IJ.log(path);
+				if (path.endsWith(".txt") || path.endsWith(".ijm") || path.endsWith(".js") )
+					addtoChoiceList(f);
+				//cIndex = c.getSelectedIndex();
 			} catch (Throwable e) {
 				if (!Macro.MACRO_CANCELED.equals(e.getMessage()))
 					IJ.handleException(e);

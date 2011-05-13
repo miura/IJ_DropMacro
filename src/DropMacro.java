@@ -16,7 +16,7 @@ import java.awt.event.*;
 * Jerome Mutterer and Wayne Rasband.
 */
 
-public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
+public class DropMacro extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
 	
 	private Iterator iterator;
 	Label l = new Label();
@@ -35,7 +35,7 @@ public class Drop_Macro extends PlugInFrame implements DropTargetListener, Runna
 	}
 	
 	
-	public Drop_Macro() {
+	public DropMacro() {
 		super("DropMacro");
 		if (IJ.versionLessThan("1.43i")) return;
 		l.setText("Drag a macro to run");
