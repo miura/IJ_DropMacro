@@ -42,6 +42,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		super("DropJavascript");
 		if (IJ.versionLessThan("1.43i")) return;
 		l.setText("Drop Javascripts here");
+/*
 		File f = new File(defaultScriptsPath);
 		if (!f.exists()){ 
 			f.mkdir();
@@ -59,6 +60,8 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 				if (IJ.debugMode) IJ.log(list[i]);
 			}
 		}
+		*/
+		c.addItem("(no script yet)");
 		b.setLabel("Run");
 		b.addActionListener(this);
 		clear.setLabel("Clear");
@@ -242,7 +245,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
 		int cIndex;
-		if (c.getItemCount()>0) {
+		if (paths.getItemCount()>0) {
 			if (source==b) {
 				cIndex = c.getSelectedIndex();
 				IJ.runMacroFile(paths.getItem(cIndex));
