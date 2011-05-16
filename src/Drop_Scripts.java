@@ -11,40 +11,43 @@ import java.awt.datatransfer.*;
 import java.awt.dnd.*;
 import java.awt.event.*;
 
-/** Drag  & Drop plugin for Javascript files.  
+/** Drag  & Drop plugin for Script files.  
  * Kota Miura (miura@embl.de)
  * 
  * --- modified Dropfile_.java: original description is below ---
- * This plug-in creates a frame that accepts drag and drop
+ * 
+* This plug-in creates a frame that accepts drag and drop
 * and calls the selected macro for each file.
 * based on the default sample plugin frame and the builtin DragAndDrop.java plugin
 * Jerome Mutterer and Wayne Rasband.
 */
 
 @SuppressWarnings("serial")
-public class Drop_Javascript extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
+public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
 	
 	private Iterator iterator;
 	Label l = new Label();
 	Choice c = new Choice();
-	//Choice exts = new Choice();
 	Choice paths = new Choice();
 	Button b = new Button();
 	Button clear = new Button();
 	Button code = new Button();
+
 	//TODO consider changing this to the original location, or just omit saving such
 	String defaultScriptsPath = IJ.getDirectory("imagej")+File.separator+"scripts"+File.separator;
+	
 	private boolean isNotDroppedYet = true; 
 
-	public Drop_Javascript() {
-		super("DropJavascript");
+	public Drop_Scripts() {
+		super("DropScript");
 		if (IJ.versionLessThan("1.43i")) return;
-		l.setText("Drop Javascripts here");
+		l.setText("Drop Scripts here");
+/*
 		File f = new File(defaultScriptsPath);
 		if (!f.exists()){ 
 			f.mkdir();
 		}
-		IJ.debugMode = true;		
+		//IJ.debugMode = true;		
 		String[] list = f.list();	// a list of pre-existing macros
 		if (countJSfiles(list)==0) {
 			phantomJSGenerator();
@@ -57,6 +60,8 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 				if (IJ.debugMode) IJ.log(list[i]);
 			}
 		}
+		*/
+		c.addItem("(no script yet)");
 		b.setLabel("Run");
 		b.addActionListener(this);
 		clear.setLabel("Clear");
@@ -107,10 +112,39 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 					iterator = ((java.util.List)data).iterator();
 					if (IJ.debugMode) IJ.log("isFlavorJavaFileListType()");
 					break;
-				} 
+				} /*else if (flavors[i].isFlavorTextType()) {
+					Object ob = t.getTransferData(flavors[i]);
+					if (!(ob instanceof String)) continue;	
+
+					String s = ob.toString().trim();
+					if (IJ.isLinux() && s.length()>1 && (int)s.charAt(1)==0)
+						s = fixLinuxString(s);
+					ArrayList list = new ArrayList();
+					if (s.indexOf("href=\"")!=-1 || s.indexOf("src=\"")!=-1) {
+						s = parseHTML(s);
+						if (IJ.debugMode) IJ.log("  url: "+s);
+						list.add(s);
+						this.iterator = list.iterator();
+						break;
+					}
+					BufferedReader br = new BufferedReader(new StringReader(s));
+					String tmp;
+					while (null != (tmp = br.readLine())) {
+						tmp = java.net.URLDecoder.decode(tmp, "UTF-8");
+						if (tmp.startsWith("file://")) tmp = tmp.substring(7);
+						//if (IJ.debugMode) IJ.log("  content: "+tmp);
+						IJ.log("  content: "+tmp);
+						if (tmp.startsWith("http://"))
+							list.add(s);
+						else
+							list.add(new File(tmp));
+					}
+					this.iterator = list.iterator();
+					break;
+				}*/
 			}
 			if (iterator!=null) {
-				Thread thread = new Thread(this, "Drop_Javascript");
+				Thread thread = new Thread(this, "Drop_Script");
 				thread.setPriority(Math.max(thread.getPriority()-1, Thread.MIN_PRIORITY));
 				thread.start();
 			}
@@ -123,7 +157,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		if (flavors==null || flavors.length==0)
 			IJ.error("First drag and drop ignored\nPlease try again.");
 	}
-	private String fixLinuxString(String s) {
+/*	private String fixLinuxString(String s) {
 		StringBuffer sb = new StringBuffer(200);
 		for (int i=0; i<s.length(); i+=2)
 			sb.append(s.charAt(i));
@@ -146,7 +180,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 		}
 		return s;
 	}
-
+*/
 	
 	public void dragEnter(DropTargetDragEvent e)  {
 		l.setText("Drop here!");
@@ -158,7 +192,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	}
 	
 	public void dragExit(DropTargetEvent e) {
-		l.setText("Drop Javascripts here");
+		l.setText("Drop Scripts here");
 	}
 	
 	public void dropActionChanged(DropTargetDragEvent e) {}
@@ -166,19 +200,22 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	// Runnable method: called after drag and drop
 	public void run() {
 		Iterator iterator = this.iterator;
+		//int cIndex;
 		while(iterator.hasNext()) {
 			Object obj = iterator.next();
 			try {
 				File f = (File)obj;
-				//String path = f.getCanonicalPath();
-				if (IJ.debugMode) IJ.log(f.getCanonicalPath());
-				addtoChoiceList(f);
+				String path = f.getCanonicalPath();
+				IJ.log(path);
+				if (path.endsWith(".txt") || path.endsWith(".ijm") || path.endsWith(".js") )
+					addtoChoiceList(f);
+				//cIndex = c.getSelectedIndex();
 			} catch (Throwable e) {
 				if (!Macro.MACRO_CANCELED.equals(e.getMessage()))
 					IJ.handleException(e);
 			}
 		}
-		l.setText("Drop Javascript here");
+		l.setText("Drag JS to run");
 	}
 	
 	public void addtoChoiceList(File f){
@@ -209,7 +246,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	public void actionPerformed(ActionEvent e) {
 		Object source = e.getSource();
 		int cIndex;
-		if (c.getItemCount()>0) {
+		if (paths.getItemCount()>0) {
 			if (source==b) {
 				cIndex = c.getSelectedIndex();
 				IJ.runMacroFile(paths.getItem(cIndex));
