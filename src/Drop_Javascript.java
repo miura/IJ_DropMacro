@@ -107,36 +107,7 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 					iterator = ((java.util.List)data).iterator();
 					if (IJ.debugMode) IJ.log("isFlavorJavaFileListType()");
 					break;
-				} else if (flavors[i].isFlavorTextType()) {
-					Object ob = t.getTransferData(flavors[i]);
-					if (!(ob instanceof String)) continue;	
-
-					String s = ob.toString().trim();
-					if (IJ.isLinux() && s.length()>1 && (int)s.charAt(1)==0)
-						s = fixLinuxString(s);
-					ArrayList list = new ArrayList();
-					if (s.indexOf("href=\"")!=-1 || s.indexOf("src=\"")!=-1) {
-						s = parseHTML(s);
-						if (IJ.debugMode) IJ.log("  url: "+s);
-						list.add(s);
-						this.iterator = list.iterator();
-						break;
-					}
-					BufferedReader br = new BufferedReader(new StringReader(s));
-					String tmp;
-					while (null != (tmp = br.readLine())) {
-						tmp = java.net.URLDecoder.decode(tmp, "UTF-8");
-						if (tmp.startsWith("file://")) tmp = tmp.substring(7);
-						//if (IJ.debugMode) IJ.log("  content: "+tmp);
-						IJ.log("  content: "+tmp);
-						if (tmp.startsWith("http://"))
-							list.add(s);
-						else
-							list.add(new File(tmp));
-					}
-					this.iterator = list.iterator();
-					break;
-				}
+				} 
 			}
 			if (iterator!=null) {
 				Thread thread = new Thread(this, "Drop_Javascript");
@@ -195,21 +166,19 @@ public class Drop_Javascript extends PlugInFrame implements DropTargetListener, 
 	// Runnable method: called after drag and drop
 	public void run() {
 		Iterator iterator = this.iterator;
-		int cIndex;
 		while(iterator.hasNext()) {
 			Object obj = iterator.next();
 			try {
 				File f = (File)obj;
 				//String path = f.getCanonicalPath();
-				IJ.log(f.getCanonicalPath());
+				if (IJ.debugMode) IJ.log(f.getCanonicalPath());
 				addtoChoiceList(f);
-				cIndex = c.getSelectedIndex();
 			} catch (Throwable e) {
 				if (!Macro.MACRO_CANCELED.equals(e.getMessage()))
 					IJ.handleException(e);
 			}
 		}
-		l.setText("Drag JS to run");
+		l.setText("Drop Javascript here");
 	}
 	
 	public void addtoChoiceList(File f){
