@@ -1,15 +1,33 @@
-import ij.*;
-import ij.io.*;
-import ij.gui.*;
-import ij.process.*;
-import ij.plugin.Macro_Runner;
-import ij.plugin.frame.*;
-import java.io.*;
-import java.util.*;
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.*;
+import ij.IJ;
+import ij.Macro;
+import ij.WindowManager;
+import ij.gui.GUI;
+import ij.plugin.frame.PlugInFrame;
+
+import java.awt.Button;
+import java.awt.Choice;
+import java.awt.FlowLayout;
+import java.awt.Label;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Iterator;
+import org.python.core.PyDictionary;
+import org.python.core.PySystemState;
+import org.python.util.PythonInterpreter;
 
 /** Drag  & Drop plugin for Script files.  
  * Kota Miura (miura@embl.de)
@@ -23,7 +41,7 @@ import java.awt.event.*;
 */
 
 @SuppressWarnings("serial")
-public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener {
+public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener, WindowListener {
 	
 	private Iterator iterator;
 	Label l = new Label();
@@ -36,7 +54,8 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 	//TODO consider changing this to the original location, or just omit saving such
 	String defaultScriptsPath = IJ.getDirectory("imagej")+File.separator+"scripts"+File.separator;
 	
-	private boolean isNotDroppedYet = true; 
+	private boolean isNotDroppedYet = true;
+	private boolean isPy = false; 
 
 	public Drop_Scripts() {
 		super("DropScript");
@@ -207,15 +226,20 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 				File f = (File)obj;
 				String path = f.getCanonicalPath();
 				IJ.log(path);
-				if (path.endsWith(".txt") || path.endsWith(".ijm") || path.endsWith(".js") )
+				if (path.endsWith(".txt") || path.endsWith(".ijm") || path.endsWith(".js") || path.endsWith(".py") ){
 					addtoChoiceList(f);
+					if (path.endsWith(".py"))
+						isPy  = true;
+					else
+						isPy = false;
+				}
 				//cIndex = c.getSelectedIndex();
 			} catch (Throwable e) {
 				if (!Macro.MACRO_CANCELED.equals(e.getMessage()))
 					IJ.handleException(e);
 			}
 		}
-		l.setText("Drag JS to run");
+		l.setText("Drag here to list");
 	}
 	
 	public void addtoChoiceList(File f){
@@ -249,7 +273,11 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		if (paths.getItemCount()>0) {
 			if (source==b) {
 				cIndex = c.getSelectedIndex();
-				IJ.runMacroFile(paths.getItem(cIndex));
+				isPy = paths.getItem(cIndex).endsWith(".py");
+				if (isPy) 
+					runPY(paths.getItem(cIndex));
+				else
+					IJ.runMacroFile(paths.getItem(cIndex));
 			}
 			if (source == clear){
 				c.removeAll();
@@ -263,5 +291,21 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		}
 
 	}
+    /** Run the Jython script at @param path */
+    public boolean runPY(String path) {
+        try {
+            PySystemState pystate = new PySystemState();
+            pystate.setClassLoader(IJ.getClassLoader());
+            PythonInterpreter pi = new PythonInterpreter(new PyDictionary(), pystate);
+            pi.execfile(path);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+    public void windowClosed(WindowEvent e) {
+    	WindowManager.removeWindow(this);
+    }
 	
 }
