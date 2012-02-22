@@ -30,7 +30,6 @@ import java.util.Iterator;
 import org.python.core.PyDictionary;
 import org.python.core.PySystemState;
 import org.python.util.PythonInterpreter;
->>>>>>> 4e7f85627c86160bf5a2a7dfcc5ac278f665bbeb
 
 /** Drag  & Drop plugin for Script files.  
  * Kota Miura (miura@embl.de)
