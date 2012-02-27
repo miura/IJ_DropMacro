@@ -1,3 +1,5 @@
+package emblcmci.util;
+
 import ij.IJ;
 import ij.Macro;
 import ij.WindowManager;

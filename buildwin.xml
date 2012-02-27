@@ -6,7 +6,8 @@
 	<property name="dist"  location="dist" />
 
 	<property name="pluginsDir"  location="$basedir/../../imagej/plugins/" />
-
+	<property name="fijipluginsDir"  location="D:\\Fiji.app\\plugins\\" />	
+	<property name = "jarfile" value="Drop_Macro.jar" />
 	<property name="user.name" value="Kota Miura" >
 	</property>
 	<target name="main" depends="compress" description="Main target">
@@ -15,7 +16,7 @@
 	</echo>
 	</target>
 	<target name="compress" depends="" description="generate the distribution">
-		<jar jarfile="Drop_Macro.jar">
+		<jar jarfile="${jarfile}">
 			<fileset dir="." includes="plugins.config" />
 			<fileset dir="${src}" includes="**/*.*" />
 			<fileset dir="${build}" includes="**/*.*" >
@@ -24,6 +25,13 @@
 				<attribute name="Built-By" value="${user.name}"/>
 			</manifest>
 		</jar>
-		<copy file="Drop_Macro.jar" toDir="${pluginsDir}" />
+		<copy file="${jarfile}" toDir="${pluginsDir}" />
+ 		<echo>
+ 			Copied ${jarfile} to ${pluginsDir}
+ 		</echo>	
+		<copy file="${jarfile}" toDir="${fijipluginsDir}" />
+ 		<echo>
+ 			Copied ${jarfile} to ${fijipluginsDir}
+ 		</echo>	 		
 	</target>
 </project>
