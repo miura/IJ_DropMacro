@@ -1,5 +1,16 @@
 package emblcmci.util;
 
+/** Drag  & Drop plugin for Script files.  
+ * Kota Miura (miura@embl.de)
+ * 
+ * --- modified Dropfile_.java: original description is below ---
+ * 
+* This plug-in creates a frame that accepts drag and drop
+* and calls the selected macro for each file.
+* based on the default sample plugin frame and the builtin DragAndDrop.java plugin
+* Jerome Mutterer and Wayne Rasband.
+*/
+
 import ij.IJ;
 import ij.Macro;
 import ij.WindowManager;
@@ -33,34 +44,21 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Iterator;
+import java.util.Observable;
+import java.util.Observer;
 
-import org.apache.commons.io.monitor.FileAlterationListener;
-import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
-import org.apache.commons.io.monitor.FileAlterationMonitor;
-import org.apache.commons.io.monitor.FileAlterationObserver;
 import org.python.core.PyDictionary;
 import org.python.core.PySystemState;
 import org.python.util.PythonInterpreter;
 
-/** Drag  & Drop plugin for Script files.  
- * Kota Miura (miura@embl.de)
- * 
- * --- modified Dropfile_.java: original description is below ---
- * 
-* This plug-in creates a frame that accepts drag and drop
-* and calls the selected macro for each file.
-* based on the default sample plugin frame and the builtin DragAndDrop.java plugin
-* Jerome Mutterer and Wayne Rasband.
-*/
-
 @SuppressWarnings("serial")
-public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener, WindowListener, ItemListener {
+public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener, WindowListener, ItemListener, Observer {
 	
 	private Iterator iterator;
-	Label l = new Label();
-	Choice c = new Choice();
+	Label dropzone = new Label();
+	Choice scriptlist = new Choice();
 	Choice paths = new Choice();
-	Button b = new Button();
+	Button runbutton = new Button();
 	Button clear = new Button();
 	Button code = new Button();
 	Checkbox autorun = new Checkbox();
@@ -70,48 +68,33 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 	
 	private boolean isNotDroppedYet = true;
 	private boolean isPy = false;
-	private FileAlterationMonitor monitor; 
+	
+	static FileChangeNotifier fcn;
 
 	public Drop_Scripts() {
 		super("DropScript");
 		if (IJ.versionLessThan("1.43i")) return;
-		l.setText("Drop Scripts here");
-/*
-		File f = new File(defaultScriptsPath);
-		if (!f.exists()){ 
-			f.mkdir();
-		}
-		//IJ.debugMode = true;		
-		String[] list = f.list();	// a list of pre-existing macros
-		if (countJSfiles(list)==0) {
-			phantomJSGenerator();
-			list = f.list();
-		}
-		for (int i=0; i<list.length; i++) {
-			if (list[i].endsWith(".js")){
-				paths.addItem(defaultScriptsPath + list[i]);	
-				c.addItem(list[i]);
-				if (IJ.debugMode) IJ.log(list[i]);
-			}
-		}
-		*/
-		c.addItem("(no script yet)");
-		b.setLabel("Run");
-		b.addActionListener(this);
+		dropzone.setText("Drop Scripts here");
+
+		scriptlist.addItem("(no script yet)");
+		scriptlist.addItemListener(this);
+		runbutton.setLabel("Run");
+		runbutton.addActionListener(this);
 		clear.setLabel("Clear");
 		clear.addActionListener(this);	
 		code.setLabel("Code");
 		code.addActionListener(this);
 		autorun.setLabel("AutoRun");
-		autorun.setEnabled(false);
+		autorun.setEnabled(false);	//initially disabled, become enabled upon choosing a file
 		autorun.addItemListener(this);
 		setLayout (new FlowLayout ());
-		add(l);	add(c); add(b); add(clear);add(code);add(autorun);
+		add(dropzone);	add(scriptlist); add(runbutton); add(clear);add(code);add(autorun);
 		pack();
 		GUI.center(this);
 		new DropTarget(this, this);
 		WindowManager.addWindow(this);
 		setVisible(true); // depreciated show() sends a warning
+		
 	}
 
 	public void phantomJSGenerator(){
@@ -133,7 +116,8 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		}
 		return count;
 	}
-	// Droptarget Listener methods
+	// Drop target Listener methods
+	// triggered when file is dropped in the drop-of zone.
 	public void drop(DropTargetDropEvent dtde)  {
 		dtde.acceptDrop(DnDConstants.ACTION_COPY);
 		DataFlavor[] flavors = null;
@@ -195,16 +179,16 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 			IJ.error("First drag and drop ignored\nPlease try again.");
 	}
 	public void dragEnter(DropTargetDragEvent e)  {
-		l.setText("Drop here!");
+		dropzone.setText("Drop here!");
 		e.acceptDrag(DnDConstants.ACTION_COPY);
 	}
 	
 	public void dragOver(DropTargetDragEvent e) {
-		l.setText("Drop here!");
+		dropzone.setText("Drop here!");
 	}
 	
 	public void dragExit(DropTargetEvent e) {
-		l.setText("Drop Scripts here");
+		dropzone.setText("accepts .ijm, .js. .py");
 	}
 	
 	public void dropActionChanged(DropTargetDragEvent e) {}
@@ -232,7 +216,7 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 					IJ.handleException(e);
 			}
 		}
-		l.setText("Drag here to list");
+		dropzone.setText("Drag here to list");
 	}
 	
 	public void addtoChoiceList(File f){
@@ -248,13 +232,13 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 			return;
 		}
 		if (isNotDroppedYet){
-			c.removeAll();
-			//exts.removeAll();
+			scriptlist.removeAll();
 			paths.removeAll();
 			isNotDroppedYet = false;
+			
 		}
-		c.addItem(filename);
-		//exts.addItem("");
+		autorun.setEnabled(true);
+		scriptlist.addItem(filename);
 		paths.addItem(filepath);
 	}
 	
@@ -264,8 +248,8 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		Object source = e.getSource();
 		int cIndex;
 		if (paths.getItemCount()>0) {
-			if (source==b) {
-				cIndex = c.getSelectedIndex();
+			if (source==runbutton) {
+				cIndex = scriptlist.getSelectedIndex();
 				isPy = paths.getItem(cIndex).endsWith(".py");
 				if (isPy) 
 					runPY(paths.getItem(cIndex));
@@ -273,12 +257,13 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 					IJ.runMacroFile(paths.getItem(cIndex));
 			}
 			if (source == clear){
-				c.removeAll();
-				//exts.removeAll();
-				paths.removeAll();			
+				scriptlist.removeAll();
+				paths.removeAll();
+				autorun.setEnabled(false);
+				isNotDroppedYet =true;
 			}
 			if (source == code){
-				cIndex = c.getSelectedIndex();
+				cIndex = scriptlist.getSelectedIndex();
 				IJ.run("Edit...", "open=" + paths.getItem(cIndex));
 			}
 		}
@@ -287,42 +272,40 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 	@Override
 	public void itemStateChanged(ItemEvent i) {
 		// need to implement this
-		//if (i.getSource() == autorun){
-		if (i.getSource() != autorun){	
+		int cIndex = scriptlist.getSelectedIndex();
+		String filepath = paths.getItem(cIndex);
+	
+		if (i.getSource() == autorun){
+//		if (i.getSource() != autorun){	
 			if (autorun.getState()){
-				int cIndex = c.getSelectedIndex();
-				String filepath = paths.getItem(cIndex);
-				
-		        FileAlterationObserver observer = new FileAlterationObserver(filepath);     
-		        FileAlterationListener listener = new FileAlterationListenerAdaptor() {
-					int cIndex;
-		        	@Override
-		            public void onFileChange(File file) {
-						
-						isPy = paths.getItem(cIndex).endsWith(".py");
-						if (isPy) 
-							runPY(paths.getItem(cIndex));
-						else
-							IJ.runMacroFile(paths.getItem(cIndex));
-		            }
-		        };
-		        long pollingInterval = 1000;
-		        if (monitor == null)
-		        	monitor = new FileAlterationMonitor(pollingInterval );  
-		        observer.addListener(listener);
-		        monitor.addObserver(observer);
-		        try {
-					monitor.start();
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}				
+				fcn = new FileChangeNotifier(filepath);
+				fcn.addObserver(this);
 			} else {
-				
+				fcn.deleteObserver(this);
+				fcn = null;
+			}
+		}
+		if (i.getSource() == scriptlist){
+			// if fcn is already alive, then delete all observers first.
+			if ((scriptlist.getItemCount() > 0) && autorun.getState()){
+				if (fcn != null)
+					fcn = null;
+				fcn = new FileChangeNotifier(filepath);
+				fcn.addObserver(this);
 			}
 		}
 		
 	}
+	@Override
+	public void update(Observable arg0, Object arg1) {
+		int cIndex = scriptlist.getSelectedIndex();
+		isPy = paths.getItem(cIndex).endsWith(".py");
+		if (isPy) 
+			runPY(paths.getItem(cIndex));
+		else
+			IJ.runMacroFile(paths.getItem(cIndex));
+	}
+	
     /** Run the Jython script at @param path */
     public boolean runPY(String path) {
     	ByteArrayOutputStream baos = new ByteArrayOutputStream();
