@@ -133,36 +133,7 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 					iterator = ((java.util.List)data).iterator();
 					if (IJ.debugMode) IJ.log("isFlavorJavaFileListType()");
 					break;
-				} /*else if (flavors[i].isFlavorTextType()) {
-					Object ob = t.getTransferData(flavors[i]);
-					if (!(ob instanceof String)) continue;	
-
-					String s = ob.toString().trim();
-					if (IJ.isLinux() && s.length()>1 && (int)s.charAt(1)==0)
-						s = fixLinuxString(s);
-					ArrayList list = new ArrayList();
-					if (s.indexOf("href=\"")!=-1 || s.indexOf("src=\"")!=-1) {
-						s = parseHTML(s);
-						if (IJ.debugMode) IJ.log("  url: "+s);
-						list.add(s);
-						this.iterator = list.iterator();
-						break;
-					}
-					BufferedReader br = new BufferedReader(new StringReader(s));
-					String tmp;
-					while (null != (tmp = br.readLine())) {
-						tmp = java.net.URLDecoder.decode(tmp, "UTF-8");
-						if (tmp.startsWith("file://")) tmp = tmp.substring(7);
-						//if (IJ.debugMode) IJ.log("  content: "+tmp);
-						IJ.log("  content: "+tmp);
-						if (tmp.startsWith("http://"))
-							list.add(s);
-						else
-							list.add(new File(tmp));
-					}
-					this.iterator = list.iterator();
-					break;
-				}*/
+				} 
 			}
 			if (iterator!=null) {
 				Thread thread = new Thread(this, "Drop_Script");
@@ -216,7 +187,7 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 					IJ.handleException(e);
 			}
 		}
-		dropzone.setText("Drag here to list");
+		dropzone.setText("Add More Scripts");
 	}
 	
 	public void addtoChoiceList(File f){
@@ -235,7 +206,10 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 			scriptlist.removeAll();
 			paths.removeAll();
 			isNotDroppedYet = false;
-			
+			if (filename.endsWith(".py"))
+				code.setEnabled(false);
+			else
+				code.setEnabled(true);			
 		}
 		autorun.setEnabled(true);
 		scriptlist.addItem(filename);
@@ -287,15 +261,25 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		}
 		if (i.getSource() == scriptlist){
 			// if fcn is already alive, then delete all observers first.
-			if ((scriptlist.getItemCount() > 0) && autorun.getState()){
-				if (fcn != null)
-					fcn = null;
-				fcn = new FileChangeNotifier(filepath);
-				fcn.addObserver(this);
+			if (scriptlist.getItemCount() > 0){
+				if (paths.getItem(cIndex).endsWith(".py"))
+					code.setEnabled(false);
+				else
+					code.setEnabled(true);
+					
+				if (autorun.getState()){
+					if (fcn != null)
+						fcn = null;
+					fcn = new FileChangeNotifier(filepath);
+					fcn.addObserver(this);
+				}
 			}
 		}
 		
 	}
+	/** overriding observer method. Invoked upon notification from 
+	 * FileChange checker.
+	 */
 	@Override
 	public void update(Observable arg0, Object arg1) {
 		int cIndex = scriptlist.getSelectedIndex();
@@ -308,8 +292,8 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 	
     /** Run the Jython script at @param path */
     public boolean runPY(String path) {
-    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    	ByteArrayOutputStream baosError = new ByteArrayOutputStream();
+    	ByteArrayOutputStream baos = new ByteArrayOutputStream(1000);
+    	ByteArrayOutputStream baosError = new ByteArrayOutputStream(1000);
  //       ScriptRunner.runPY(path, null);
     	Calendar cal = Calendar.getInstance();
     	cal.getTime();
@@ -321,11 +305,12 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
             PythonInterpreter pi = new PythonInterpreter(new PyDictionary(), pystate);
             pi.setErr(baosError);
             pi.setOut(baos);
+            
             pi.execfile(path);
         } catch (Exception e) {
         	IJ.log(baos.toString());
             e.printStackTrace();
-            IJ.log("!!!!! pity! need to dubug this script! !!!!!");
+            IJ.log("!!!!! bah! need to debug !!!!!");
             IJ.log(baosError.toString());
             return false;
         }
@@ -335,6 +320,7 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
     public void windowClosed(WindowEvent e) {
     	WindowManager.removeWindow(this);
     }
+    /** for debugging */
     public static void main(String[] args) {
     	Drop_Scripts ds = new Drop_Scripts();
     	
