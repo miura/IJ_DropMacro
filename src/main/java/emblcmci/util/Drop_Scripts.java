@@ -7,6 +7,7 @@ import ij.gui.GUI;
 import ij.plugin.frame.PlugInFrame;
 
 import java.awt.Button;
+import java.awt.Checkbox;
 import java.awt.Choice;
 import java.awt.FlowLayout;
 import java.awt.Label;
@@ -20,13 +21,23 @@ import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Iterator;
+
+import org.apache.commons.io.monitor.FileAlterationListener;
+import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
+import org.apache.commons.io.monitor.FileAlterationMonitor;
+import org.apache.commons.io.monitor.FileAlterationObserver;
 import org.python.core.PyDictionary;
 import org.python.core.PySystemState;
 import org.python.util.PythonInterpreter;
@@ -43,7 +54,7 @@ import org.python.util.PythonInterpreter;
 */
 
 @SuppressWarnings("serial")
-public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener, WindowListener {
+public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Runnable, ActionListener, WindowListener, ItemListener {
 	
 	private Iterator iterator;
 	Label l = new Label();
@@ -52,12 +63,14 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 	Button b = new Button();
 	Button clear = new Button();
 	Button code = new Button();
+	Checkbox autorun = new Checkbox();
 
 	//TODO consider changing this to the original location, or just omit saving such
 	String defaultScriptsPath = IJ.getDirectory("imagej")+File.separator+"scripts"+File.separator;
 	
 	private boolean isNotDroppedYet = true;
-	private boolean isPy = false; 
+	private boolean isPy = false;
+	private FileAlterationMonitor monitor; 
 
 	public Drop_Scripts() {
 		super("DropScript");
@@ -88,9 +101,12 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		clear.setLabel("Clear");
 		clear.addActionListener(this);	
 		code.setLabel("Code");
-		code.addActionListener(this);			
+		code.addActionListener(this);
+		autorun.setLabel("AutoRun");
+		autorun.setEnabled(false);
+		autorun.addItemListener(this);
 		setLayout (new FlowLayout ());
-		add(l);	add(c); add(b); add(clear);add(code);
+		add(l);	add(c); add(b); add(clear);add(code);add(autorun);
 		pack();
 		GUI.center(this);
 		new DropTarget(this, this);
@@ -178,31 +194,6 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		if (flavors==null || flavors.length==0)
 			IJ.error("First drag and drop ignored\nPlease try again.");
 	}
-/*	private String fixLinuxString(String s) {
-		StringBuffer sb = new StringBuffer(200);
-		for (int i=0; i<s.length(); i+=2)
-			sb.append(s.charAt(i));
-		return new String(sb);
-	}
-
-	private String parseHTML(String s) {
-		if (IJ.debugMode) IJ.log("parseHTML:\n"+s);
-		int index1 = s.indexOf("src=\"");
-		if (index1>=0) {
-			int index2 = s.indexOf("\"", index1+5);
-			if (index2>0)
-				return s.substring(index1+5, index2);
-		}
-		index1 = s.indexOf("href=\"");
-		if (index1>=0) {
-			int index2 = s.indexOf("\"", index1+6);
-			if (index2>0)
-				return s.substring(index1+6, index2);
-		}
-		return s;
-	}
-*/
-	
 	public void dragEnter(DropTargetDragEvent e)  {
 		l.setText("Drop here!");
 		e.acceptDrag(DnDConstants.ACTION_COPY);
@@ -293,21 +284,78 @@ public class Drop_Scripts extends PlugInFrame implements DropTargetListener, Run
 		}
 
 	}
+	@Override
+	public void itemStateChanged(ItemEvent i) {
+		// need to implement this
+		//if (i.getSource() == autorun){
+		if (i.getSource() != autorun){	
+			if (autorun.getState()){
+				int cIndex = c.getSelectedIndex();
+				String filepath = paths.getItem(cIndex);
+				
+		        FileAlterationObserver observer = new FileAlterationObserver(filepath);     
+		        FileAlterationListener listener = new FileAlterationListenerAdaptor() {
+					int cIndex;
+		        	@Override
+		            public void onFileChange(File file) {
+						
+						isPy = paths.getItem(cIndex).endsWith(".py");
+						if (isPy) 
+							runPY(paths.getItem(cIndex));
+						else
+							IJ.runMacroFile(paths.getItem(cIndex));
+		            }
+		        };
+		        long pollingInterval = 1000;
+		        if (monitor == null)
+		        	monitor = new FileAlterationMonitor(pollingInterval );  
+		        observer.addListener(listener);
+		        monitor.addObserver(observer);
+		        try {
+					monitor.start();
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}				
+			} else {
+				
+			}
+		}
+		
+	}
     /** Run the Jython script at @param path */
     public boolean runPY(String path) {
+    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    	ByteArrayOutputStream baosError = new ByteArrayOutputStream();
+ //       ScriptRunner.runPY(path, null);
+    	Calendar cal = Calendar.getInstance();
+    	cal.getTime();
+    	SimpleDateFormat sdf = new SimpleDateFormat("yyyy:MM:dd:HH:mm:ss");
+    	IJ.log("--% " + sdf.format(cal.getTime()) + " %--");
         try {
             PySystemState pystate = new PySystemState();
             pystate.setClassLoader(IJ.getClassLoader());
             PythonInterpreter pi = new PythonInterpreter(new PyDictionary(), pystate);
+            pi.setErr(baosError);
+            pi.setOut(baos);
             pi.execfile(path);
         } catch (Exception e) {
+        	IJ.log(baos.toString());
             e.printStackTrace();
+            IJ.log("!!!!! pity! need to dubug this script! !!!!!");
+            IJ.log(baosError.toString());
             return false;
         }
+        IJ.log(baos.toString());
         return true;
     }
     public void windowClosed(WindowEvent e) {
     	WindowManager.removeWindow(this);
+    }
+    public static void main(String[] args) {
+    	Drop_Scripts ds = new Drop_Scripts();
+    	
+    	
     }
 	
 }
