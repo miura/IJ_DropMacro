@@ -6,14 +6,14 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.scijava</groupId>
-		<artifactId>pom-scijava</artifactId>
-		<version>1.28</version>
+		<groupId>net.imagej</groupId>
+		<artifactId>pom-imagej</artifactId>
+		<version>7.0.0</version>
 	</parent>
 
 	<groupId>embl.cmci</groupId>
 	<artifactId>Drop_Script</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 
 	<name>plugins/Drop_Script.jar</name>
   <description>
